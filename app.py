@@ -129,7 +129,41 @@ if st.button("Calculate"):
         asset_based_loan = max_loan_by_dbr
     else:
         asset_based_loan = asset_value * (1 - equity_pct / 100)
+# -----------------------------
+# DYNAMIC ENDNOTES ENGINE
+# -----------------------------
 
+st.subheader("Banking Notes & Disclosures")
+
+notes = []
+
+# DBR note
+notes.append(f"Maximum DBR applicable for this profile: {dbr_limit*100:.0f}%")
+
+# KIBOR note
+notes.append("Reference KIBOR: 12.96% (subject to change)")
+
+# Product-specific markup note
+if product == "Personal Loan":
+    notes.append("Pricing: Fixed 35% p.a. amortized")
+elif product == "Auto Loan":
+    notes.append("Pricing: KIBOR + 5% (floating)")
+    notes.append("Insurance applies with reducing asset coverage structure")
+elif product == "Home Loan":
+    notes.append("Pricing: KIBOR + 3% (floating)")
+elif product == "Solar Loan":
+    notes.append("Pricing: KIBOR + 5% (floating)")
+elif product == "Business Loan":
+    notes.append("Pricing: KIBOR + 5% (floating)")
+
+# Asset notes
+if product != "Personal Loan":
+    notes.append(f"Equity requirement applied: {equity_pct}%")
+    notes.append("Final approval based on lower of DBR capacity vs asset financing")
+
+# Display
+for n in notes:
+    st.info("• " + n)
     # -------------------------
     # FINAL APPROVED LOAN
     # -------------------------

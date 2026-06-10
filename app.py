@@ -3,7 +3,48 @@ import pandas as pd
 import re
 
 st.set_page_config(page_title="Digital Credit Engine", layout="wide")
+st.markdown(
+    """
+    <style>
 
+    /* App background */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: #f8fafc;
+    }
+
+    /* Title styling */
+    h1 {
+        color: #38bdf8 !important;
+        font-weight: 700;
+    }
+
+    /* Section headers */
+    h2, h3 {
+        color: #e2e8f0 !important;
+        border-left: 4px solid #38bdf8;
+        padding-left: 10px;
+    }
+
+    /* Cards feel */
+    .stMetric {
+        background-color: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background-color: #38bdf8;
+        color: black;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # -----------------------------
 # CONFIGURATION
 # -----------------------------

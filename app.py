@@ -209,8 +209,9 @@ for n in notes:
     st.dataframe(df, use_container_width=True)
 
     st.download_button(
-        "Download Schedule (CSV)",
-        df.to_csv(index=False),
-        "schedule.csv",
-        "text/csv"
-    )
+    "Download Schedule (CSV)",
+    df.to_csv(index=False),
+    "schedule.csv",
+    "text/csv",
+    key="download_schedule_main"
+)

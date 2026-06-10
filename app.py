@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 
-st.set_page_config(page_title="Alpha Finance - Eligibility Tool", layout="wide")
+st.set_page_config(page_title="Alpha Finance - Eligibility Engine", layout="wide")
 
 # -----------------------------
-# CONFIGURATION
+# CONFIG
 # -----------------------------
 
 KIBOR = 12.96 / 100
@@ -23,11 +22,6 @@ DBR_RULE = {
     "Self-Employed": 0.50,
     "Businessman": 0.50,
 }
-
-BANKS = [
-    "HBL", "UBL", "MCB", "ABL", "Bank Alfalah",
-    "Meezan Bank", "Bank Al Habib", "Faysal Bank"
-]
 
 # -----------------------------
 # FUNCTIONS
@@ -67,22 +61,16 @@ def schedule(principal, rate, months, emi_value):
 
 
 # -----------------------------
-# UI HEADER
+# UI
 # -----------------------------
 
-st.title("Alpha Finance - Digital Eligibility Engine")
+st.title("Alpha Finance - Digital Credit Engine")
 
-st.markdown("Banker-style Loan Assessment Tool")
-
-# -----------------------------
-# APPLICANT INFO
-# -----------------------------
-
-st.header("Applicant Information")
+st.header("Applicant Details")
 
 col1, col2, col3 = st.columns(3)
 
-name = col1.text_input("Full Name")
+name = col1.text_input("Name")
 cnic = col2.text_input("CNIC")
 gender = col3.selectbox("Gender", ["Male", "Female"])
 
@@ -91,128 +79,104 @@ col4, col5 = st.columns(2)
 profession = col4.selectbox("Profession", ["Salaried", "Self-Employed", "Businessman"])
 income = col5.number_input("Monthly Income (PKR)", min_value=0)
 
-experience = st.number_input("Experience (Years)", min_value=0, step=1)
-
-# -----------------------------
-# BANKING RELATIONSHIP
-# -----------------------------
-
-st.header("Banking Relationship")
-
-col6, col7 = st.columns(2)
-
-bank = col6.selectbox("Account Bank", BANKS)
-bank_years = col7.number_input("Account Duration (Years)", min_value=0)
-
-# -----------------------------
-# PRODUCT SELECTION
-# -----------------------------
-
-st.header("Financing Requirement")
+st.header("Product Selection")
 
 product = st.selectbox("Loan Product", list(PRODUCTS.keys()))
 
 rate = PRODUCTS[product]["rate"]
-max_tenor = PRODUCTS[product]["tenor"]
+tenor_years = PRODUCTS[product]["tenor"]
 
-tenor_years = st.selectbox("Tenor (Years)", list(range(1, max_tenor + 1)))
-months = tenor_years * 12
-
-# -----------------------------
-# PURPOSE
-# -----------------------------
-
-if product == "Personal Loan":
-    purpose = st.selectbox(
-        "Purpose",
-        ["Domestic Needs", "Travel", "Marriage", "Education", "Entertainment", "Other"]
-    )
-    if purpose == "Other":
-        purpose = st.text_input("Specify Purpose")
-
-else:
-    purpose = st.text_input("Specify Purpose")
+tenor = st.selectbox("Tenor (Years)", list(range(1, tenor_years + 1)))
+months = tenor * 12
 
 # -----------------------------
-# EQUITY (NON PERSONAL LOAN)
+# ASSET LOGIC
 # -----------------------------
 
 asset_value = 0
-equity = 0
+equity_pct = 0
 
 if product != "Personal Loan":
-
     st.subheader("Asset Details")
 
     asset_value = st.number_input("Asset Value (PKR)", min_value=0)
 
     if product == "Auto Loan":
-        equity = st.slider("Equity %", 30, 50, 30)
+        equity_pct = st.slider("Equity %", 30, 50, 30)
     elif product == "Solar Loan":
-        equity = st.slider("Equity %", 20, 50, 20)
+        equity_pct = st.slider("Equity %", 20, 50, 20)
     elif product == "Home Loan":
-        equity = st.slider("Equity %", 20, 50, 20)
-    else:
-        equity = 0
+        equity_pct = st.slider("Equity %", 20, 50, 20)
 
 # -----------------------------
-# CALCULATIONS
+# CALCULATION
 # -----------------------------
 
-if st.button("Calculate Eligibility"):
+if st.button("Calculate"):
 
     dbr_limit = DBR_RULE[profession]
-    max_emi = income * dbr_limit
+    max_emi_allowed = income * dbr_limit
 
-    # PERSONAL LOAN: suggest max loan only
+    # -------------------------
+    # DBR BASED LOAN (HARD CAP)
+    # -------------------------
+    max_loan_by_dbr = loan_from_emi(max_emi_allowed, rate, months)
+
+    # -------------------------
+    # ASSET BASED LOAN
+    # -------------------------
     if product == "Personal Loan":
-        loan_amount = loan_from_emi(max_emi, rate, months)
-        emi_value = max_emi
-
+        asset_based_loan = max_loan_by_dbr
     else:
-        financing = asset_value * (1 - equity / 100) if asset_value > 0 else 0
-        loan_amount = financing
-        emi_value = emi(loan_amount, rate, months)
+        asset_based_loan = asset_value * (1 - equity_pct / 100)
+
+    # -------------------------
+    # FINAL APPROVED LOAN
+    # -------------------------
+    approved_loan = min(max_loan_by_dbr, asset_based_loan)
+
+    emi_value = emi(approved_loan, rate, months)
 
     total_payment = emi_value * months
-    markup = total_payment - loan_amount
-    dbr = emi_value / income
+    markup = total_payment - approved_loan
+    dbr_actual = emi_value / income
 
-    eligible = dbr <= dbr_limit
+    eligible = dbr_actual <= dbr_limit
 
-    # -----------------------------
+    # -------------------------
     # OUTPUT
-    # -----------------------------
+    # -------------------------
 
-    st.subheader("Assessment Result")
+    st.subheader("Credit Assessment Result")
+
+    st.success(
+        f"Max loan bank can offer as per your DBR is: PKR {max_loan_by_dbr:,.0f}"
+    )
 
     colA, colB, colC = st.columns(3)
 
-    colA.metric("Loan Amount", f"PKR {loan_amount:,.0f}")
+    colA.metric("Approved Loan", f"PKR {approved_loan:,.0f}")
     colB.metric("Monthly EMI", f"PKR {emi_value:,.0f}")
-    colC.metric("DBR", f"{dbr*100:.2f}%")
+    colC.metric("DBR", f"{dbr_actual*100:.2f}%")
 
-    st.write("**Status:**", "Eligible" if eligible else "Not Eligible")
+    st.write("Status:", "Eligible" if eligible else "Not Eligible")
 
     st.subheader("Financial Summary")
     st.write("Total Repayment:", f"PKR {total_payment:,.0f}")
     st.write("Total Markup:", f"PKR {markup:,.0f}")
 
-    # -----------------------------
+    # -------------------------
     # AMORTIZATION
-    # -----------------------------
+    # -------------------------
 
     st.subheader("Amortization Schedule")
 
-    df = schedule(loan_amount, rate, months, emi_value)
+    df = schedule(approved_loan, rate, months, emi_value)
     st.dataframe(df, use_container_width=True)
-
-    # CSV export
-    csv = df.to_csv(index=False)
 
     st.download_button(
         "Download Schedule (CSV)",
-        csv,
+        df.to_csv(index=False),
         "schedule.csv",
         "text/csv"
     )

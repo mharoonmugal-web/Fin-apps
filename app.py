@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 st.set_page_config(
-    page_title="Personal Finance Loan Calculator",
+    page_title="Finance Calculator",
     layout="wide"
 )
 

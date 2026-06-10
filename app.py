@@ -91,58 +91,36 @@ def calculate_emi(principal, annual_rate, months):
     )
 def calculate_loan_from_emi(emi_value, annual_rate, months):
 
-```
-monthly_rate = annual_rate / 12
+    monthly_rate = annual_rate / 12
 
-return (
-    emi_value
-    * ((1 + monthly_rate) ** months - 1)
-    / (monthly_rate * (1 + monthly_rate) ** months)
-)
-```
+    return (
+        emi_value
+        * ((1 + monthly_rate) ** months - 1)
+        / (monthly_rate * (1 + monthly_rate) ** months)
+    )
+def build_amortization_schedule(principal, annual_rate, months, emi_value):
 
-def build_amortization_schedule(
-principal,
-annual_rate,
-months,
-emi_value
-):
+    monthly_rate = annual_rate / 12
+    balance = principal
+    rows = []
 
-```
-monthly_rate = annual_rate / 12
+    for month in range(1, months + 1):
 
-balance = principal
+        markup = balance * monthly_rate
+        principal_component = emi_value - markup
+        balance -= principal_component
 
-rows = []
+        rows.append([
+            month,
+            round(emi_value, 2),
+            round(principal_component, 2),
+            round(markup, 2),
+            round(max(balance, 0), 2)
+        ])
 
-for month in range(1, months + 1):
-
-    markup = balance * monthly_rate
-
-    principal_component = emi_value - markup
-
-    balance -= principal_component
-
-    rows.append([
-        month,
-        round(emi_value, 2),
-        round(principal_component, 2),
-        round(markup, 2),
-        round(max(balance, 0), 2)
+    return pd.DataFrame(rows, columns=[
+        "Month", "EMI", "Principal", "Markup", "Outstanding Balance"
     ])
-
-return pd.DataFrame(
-    rows,
-    columns=[
-        "Month",
-        "EMI",
-        "Principal",
-        "Markup",
-        "Outstanding Balance"
-    ]
-)
-```
-
 # -----------------------------
 
 # HEADER

@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 
 st.set_page_config(
-    page_title="Finance Calculator",
+    page_title="Loan Eligibility Calculator",
     layout="wide"
 )
 
-st.title("Personal Finance Loan Calculator")
+st.title("Loan Eligibility Calculator")
 
 DBR_LIMIT = 0.40
 

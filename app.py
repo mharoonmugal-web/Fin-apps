@@ -78,7 +78,7 @@ BANKS = [
 
 def calculate_emi(principal, annual_rate, months):
 
-```
+
 monthly_rate = annual_rate / 12
 
 if monthly_rate == 0:

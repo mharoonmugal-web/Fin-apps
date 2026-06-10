@@ -78,20 +78,17 @@ BANKS = [
 
 def calculate_emi(principal, annual_rate, months):
 
+    monthly_rate = annual_rate / 12
 
-monthly_rate = annual_rate / 12
+    if monthly_rate == 0:
+        return principal / months
 
-if monthly_rate == 0:
-    return principal / months
-
-return (
-    principal
-    * monthly_rate
-    * (1 + monthly_rate) ** months
-    / ((1 + monthly_rate) ** months - 1)
-)
-```
-
+    return (
+        principal
+        * monthly_rate
+        * (1 + monthly_rate) ** months
+        / ((1 + monthly_rate) ** months - 1)
+    )
 def calculate_loan_from_emi(emi_value, annual_rate, months):
 
 ```

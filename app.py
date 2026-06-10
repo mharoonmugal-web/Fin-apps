@@ -88,7 +88,8 @@ c1, c2, c3 = st.columns(3)
 
 name = c1.text_input("Full Name")
 
-cnic = c2.text_input("CNIC (xxxxx-xxxxxxx-x)", max_chars=15)
+cnic = c2.text_input(...)
+if cnic and not re.fullmatch(...)
 
 # auto-format attempt (clean + controlled)
 if cnic:

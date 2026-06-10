@@ -64,7 +64,7 @@ def schedule(principal, rate, months, emi_value):
 # UI
 # -----------------------------
 
-st.title("Alpha Finance - Digital Credit Engine")
+st.title("Digital Credit Engine")
 
 st.header("Applicant Details")
 

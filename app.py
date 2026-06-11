@@ -4,18 +4,6 @@ import re
 
 st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 
-/* Buttons */
-    .stButton > button {
-        background-color: #38bdf8;
-        color: black;
-        font-weight: bold;
-        border-radius: 8px;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
@@ -37,23 +25,9 @@ DBR = {
 }
 
 BANKS = [
-    "Allied Bank Limited (ABL)",
-    "Askari Bank Limited",
-    "Bank Alfalah Limited",
-    "Bank Al Habib Limited",
-    "Bank of Punjab (BOP)",
-    "Faysal Bank Limited",
-    "Habib Bank Limited (HBL)",
-    "Habib Metropolitan Bank",
-    "JS Bank Limited",
-    "MCB Bank Limited",
-    "Meezan Bank Limited",
-    "National Bank of Pakistan (NBP)",
-    "Samba Bank Limited",
-    "Silkbank Limited",
-    "Soneri Bank Limited",
-    "Standard Chartered Bank (Pakistan)",
-    "United Bank Limited (UBL)"
+    "HBL", "UBL", "MCB", "ABL", "Bank Alfalah",
+    "Meezan Bank", "Bank Al Habib", "Faysal Bank",
+    "Askari Bank", "JS Bank", "Soneri Bank"
 ]
 
 # -----------------------------
@@ -101,27 +75,9 @@ c1, c2, c3 = st.columns(3)
 name = c1.text_input("Full Name")
 
 cnic = c2.text_input("CNIC (xxxxx-xxxxxxx-x)", max_chars=15)
-
-# auto-format attempt (clean + controlled)
-if cnic:
-    digits = re.sub(r"\D", "", cnic)  # keep only numbers
-
-    if len(digits) > 13:
-        digits = digits[:13]
-
-    if len(digits) >= 5:
-        formatted = digits[:5] + "-" + digits[5:]
-    else:
-        formatted = digits
-
-    if len(digits) >= 12:
-        formatted = formatted[:13]  # safety cap
-        formatted = formatted[:5] + "-" + formatted[5:12] + "-" + formatted[12:]
-
-    cnic = formatted
-
 if cnic and not re.fullmatch(r"\d{5}-\d{7}-\d", cnic):
-    c2.error("Format must be 12345-1234567-1")
+    c2.error("Invalid CNIC format")
+
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
 c4, c5, c6 = st.columns(3)

@@ -4,7 +4,7 @@ import re
 
 st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 
-    /* Buttons */
+/* Buttons */
     .stButton > button {
         background-color: #38bdf8;
         color: black;

@@ -83,7 +83,7 @@ gender = c3.selectbox("Gender", ["Male", "Female"])
 c4, c5, c6 = st.columns(3)
 
 profession = c4.selectbox("Profession", list(DBR.keys()))
-income = c5.number_input("Monthly Income (PKR)", min_value=0)
+income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
 st.header("Banking Relationship")

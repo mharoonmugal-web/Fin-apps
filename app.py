@@ -25,8 +25,8 @@ DBR = {
 }
 
 BANKS = [
-    "HBL", "UBL", "MCB", "ABL", "Bank Alfalah",
-    "Meezan Bank", "Bank Al Habib", "Faysal Bank",
+    "Habib Bank Limited", "United Bank Limited", "Muslim Commercial Bank", "Allied Bank Limited", "Bank Alfalah",
+    "Meezan Bank", "Bank Al Habib", "Faysal Bank", "The Bank of Punjab", 
     "Askari Bank", "JS Bank", "Soneri Bank"
 ]
 

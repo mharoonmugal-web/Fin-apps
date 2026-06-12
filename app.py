@@ -45,12 +45,11 @@ def get_policy(product, staff):
     policy["equity_required"] = True
 
     if staff:
-        policy["rate"] = 0.05  # staff fixed rate
+        policy["rate"] = 0.05
 
         if product == "Personal Loan":
-            policy["max_tenor"] = 8
-
-        if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
+            policy["max_tenor"] = 7
+        elif product in ["Auto Loan", "Home Loan", "Solar Loan"]:
             policy["equity_required"] = False
 
     return policy
@@ -110,10 +109,14 @@ income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
 # -----------------------------
-# STAFF LOAN
+# STAFF SECTION (UPDATED)
 # -----------------------------
 
 staff_loan = st.checkbox("Staff Loan")
+
+basic_salary = 0
+if staff_loan:
+    basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
 
 # -----------------------------
 # BANKING
@@ -168,7 +171,6 @@ equity_amount = 0
 if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
 
     st.header("Asset Details")
-
     asset = st.number_input("Asset Value (PKR)", min_value=0)
 
 # -----------------------------
@@ -179,8 +181,23 @@ if st.button("Calculate Eligibility"):
 
     dbr_limit = DBR[profession]
     max_emi = income * dbr_limit
-
     max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
+
+    # -------------------------
+    # STAFF SALARY CAP LOGIC (NEW)
+    # -------------------------
+
+    if staff_loan:
+        if product == "Personal Loan":
+            cap = basic_salary * 8
+        elif product == "Auto Loan":
+            cap = basic_salary * 50
+        elif product == "Home Loan":
+            cap = basic_salary * 150
+        else:
+            cap = max_loan_dbr
+    else:
+        cap = max_loan_dbr
 
     # -------------------------
     # EQUITY LOGIC
@@ -197,10 +214,10 @@ if st.button("Calculate Eligibility"):
         asset_loan = asset * (1 - equity_pct / 100)
 
     else:
-        asset_loan = max_loan_dbr
+        asset_loan = cap
         equity_amount = 0
 
-    approved = min(max_loan_dbr, asset_loan)
+    approved = min(max_loan_dbr, asset_loan, cap)
 
     emi_value = emi(approved, rate_used, months)
     total = emi_value * months
@@ -264,11 +281,9 @@ if st.button("Calculate Eligibility"):
 
     st.subheader("Bank Notes")
 
-    st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
-    st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
-
     if staff_loan:
         st.info("Staff Pricing: 5% fixed rate applied")
+        st.info("Staff Benefit: No processing fee for personal loans")
     else:
         if product == "Personal Loan":
             st.info("Rate: 35% amortized")

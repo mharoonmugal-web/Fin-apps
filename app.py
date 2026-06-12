@@ -205,8 +205,8 @@ st.download_button(
 
 st.subheader("Bank Notes")
 
-    st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
-    st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
+st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
+st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
 
     if product == "Personal Loan":
         st.info("Rate: 35% amortized")

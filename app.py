@@ -172,26 +172,27 @@ if st.button("Calculate Eligibility"):
     st.write("Total Repayment:", f"PKR {total:,.0f}")
     st.write("Markup:", f"PKR {markup:,.0f}")
 
-    # -----------------------------
+       # -----------------------------
     # AMORTIZATION
     # -----------------------------
 
     st.subheader("Amortization Schedule")
 
-df = schedule(approved, rate, months, emi_value)
+    df = schedule(approved, rate, months, emi_value)
 
-formatted_df = df.copy()
+    formatted_df = df.copy()
 
-for col in ["EMI", "Principal", "Markup", "Balance"]:
-    formatted_df[col] = formatted_df[col].apply(
-        lambda x: f"{x:,.0f}"
+    for col in ["EMI", "Principal", "Markup", "Balance"]:
+        formatted_df[col] = formatted_df[col].apply(
+            lambda x: f"{x:,.0f}"
+        )
+
+    st.dataframe(
+        formatted_df,
+        use_container_width=True
     )
 
-st.dataframe(
-    formatted_df,
-    use_container_width=True
-)
-st.download_button(
+    st.download_button(
         "Download Schedule",
         df.to_csv(index=False),
         "schedule.csv",
@@ -203,18 +204,24 @@ st.download_button(
     # ENDNOTES
     # -----------------------------
 
-st.subheader("Bank Notes")
+    st.subheader("Bank Notes")
 
-st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
-st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
+    st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
+    st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
 
-if product == "Personal Loan":
+    if product == "Personal Loan":
         st.info("Rate: 35% amortized")
-elif product == "Auto Loan":
+
+    elif product == "Auto Loan":
         st.info("Rate: KIBOR + 5%")
-elif product == "Home Loan":
+
+    elif product == "Home Loan":
         st.info("Rate: KIBOR + 3%")
-elif product == "Solar Loan":
+
+    elif product == "Solar Loan":
         st.info("Rate: KIBOR + 5%")
+
+    elif product == "Business Loan":
+        st.info("Rate: 35% amortized (same as personal loan)")
 elif product == "Business Loan":
      st.info("Rate: 35% amortized (same as personal loan)")

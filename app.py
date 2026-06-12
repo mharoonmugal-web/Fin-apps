@@ -97,9 +97,28 @@ c1, c2, c3 = st.columns(3)
 
 name = c1.text_input("Full Name")
 
-cnic = c2.text_input("CNIC (xxxxx-xxxxxxx-x)", max_chars=15)
-if cnic and not re.fullmatch(r"\d{5}-\d{7}-\d", cnic):
-    c2.error("Invalid CNIC format")
+# -----------------------------
+# CNIC AUTO FORMAT (FIXED)
+# -----------------------------
+
+cnic_input = c2.text_input("CNIC (13 digits)")
+
+cnic_digits = re.sub(r"\D", "", cnic_input)[:13]
+
+formatted_cnic = ""
+
+if cnic_digits:
+    if len(cnic_digits) <= 5:
+        formatted_cnic = cnic_digits
+    elif len(cnic_digits) <= 12:
+        formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:]
+    else:
+        formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:12] + "-" + cnic_digits[12:]
+
+    c2.write("Formatted: " + formatted_cnic)
+
+if cnic_input and len(cnic_digits) != 13:
+    c2.error("CNIC must be 13 digits")
 
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
@@ -137,7 +156,7 @@ max_tenor = policy["max_tenor"]
 equity_required = policy["equity_required"]
 
 # -----------------------------
-# HOME LOAN STAFF TENOR LOGIC
+# HOME LOAN STAFF TENOR RULE
 # -----------------------------
 
 if staff_loan and product == "Home Loan":
@@ -145,7 +164,7 @@ if staff_loan and product == "Home Loan":
     st.subheader("Remaining Service Details")
 
     service_years = st.number_input("Remaining Service (Years)", min_value=0, step=1)
-    service_months = st.number_input("Remaining Service (Months)", min_value=0, max_value=11, step=1)
+    service_months = st.number_input("Remaining Service (Months)", min_value=0, max_value=11)
 
     total_service_months = service_years * 12 + service_months
     service_cap_years = total_service_months // 12
@@ -194,7 +213,7 @@ if st.button("Calculate Eligibility"):
     max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
 
     # -------------------------
-    # STAFF LOAN CAPS
+    # STAFF CAPS
     # -------------------------
 
     if staff_loan:

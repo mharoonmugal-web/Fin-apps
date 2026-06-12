@@ -208,13 +208,13 @@ st.subheader("Bank Notes")
 st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
 st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
 
-    if product == "Personal Loan":
+if product == "Personal Loan":
         st.info("Rate: 35% amortized")
-    elif product == "Auto Loan":
+elif product == "Auto Loan":
         st.info("Rate: KIBOR + 5%")
-    elif product == "Home Loan":
+elif product == "Home Loan":
         st.info("Rate: KIBOR + 3%")
-    elif product == "Solar Loan":
+elif product == "Solar Loan":
         st.info("Rate: KIBOR + 5%")
-    elif product == "Business Loan":
-        st.info("Rate: 35% amortized (same as personal loan)")
+elif product == "Business Loan":
+st.info("Rate: 35% amortized (same as personal loan)")

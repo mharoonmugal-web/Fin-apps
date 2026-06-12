@@ -36,13 +36,13 @@ BANKS = [
 # -----------------------------
 
 def get_policy(product, staff):
-    policy = {}
-
     base = PRODUCTS[product]
 
-    policy["rate"] = base["rate"]
-    policy["max_tenor"] = base["max_tenor"]
-    policy["equity_required"] = True
+    policy = {
+        "rate": base["rate"],
+        "max_tenor": base["max_tenor"],
+        "equity_required": True
+    }
 
     if staff:
         policy["rate"] = 0.05
@@ -110,7 +110,7 @@ income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
 # -----------------------------
-# STAFF SECTION
+# STAFF
 # -----------------------------
 
 staff_loan = st.checkbox("Staff Loan")
@@ -133,23 +133,24 @@ product = st.selectbox("Select Product", list(PRODUCTS.keys()))
 policy = get_policy(product, staff_loan)
 
 rate_used = policy["rate"]
+max_tenor = policy["max_tenor"]
 equity_required = policy["equity_required"]
 
 # -----------------------------
-# STAFF HOME LOAN SERVICE RULE
+# HOME LOAN STAFF TENOR LOGIC
 # -----------------------------
 
-max_tenor = policy["max_tenor"]
-
 if staff_loan and product == "Home Loan":
+
     st.subheader("Remaining Service Details")
+
     service_years = st.number_input("Remaining Service (Years)", min_value=0, step=1)
     service_months = st.number_input("Remaining Service (Months)", min_value=0, max_value=11, step=1)
 
     total_service_months = service_years * 12 + service_months
-    service_cap_years = min(25, total_service_months // 12)
+    service_cap_years = total_service_months // 12
 
-    max_tenor = min(max_tenor, service_cap_years)
+    max_tenor = min(max_tenor, 25, service_cap_years)
 
 # -----------------------------
 # TENOR
@@ -163,17 +164,14 @@ months = tenor * 12
 # -----------------------------
 
 if product == "Personal Loan":
-    purpose = st.selectbox(
-        "Purpose",
-        ["Domestic", "Travel", "Marriage", "Education", "Other"]
-    )
+    purpose = st.selectbox("Purpose", ["Domestic", "Travel", "Marriage", "Education", "Other"])
     if purpose == "Other":
         purpose = st.text_input("Specify Purpose")
 else:
     purpose = st.text_input("Purpose")
 
 # -----------------------------
-# ASSET SECTION
+# ASSET
 # -----------------------------
 
 asset = 0
@@ -181,7 +179,6 @@ equity_pct = 0
 equity_amount = 0
 
 if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
-
     st.header("Asset Details")
     asset = st.number_input("Asset Value (PKR)", min_value=0)
 
@@ -197,7 +194,7 @@ if st.button("Calculate Eligibility"):
     max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
 
     # -------------------------
-    # STAFF SALARY CAP
+    # STAFF LOAN CAPS
     # -------------------------
 
     if staff_loan:
@@ -207,6 +204,8 @@ if st.button("Calculate Eligibility"):
             cap = basic_salary * 50
         elif product == "Home Loan":
             cap = basic_salary * 150
+        elif product == "Solar Loan":
+            cap = min(3_000_000, max_loan_dbr)
         else:
             cap = max_loan_dbr
     else:
@@ -306,4 +305,4 @@ if st.button("Calculate Eligibility"):
         elif product == "Solar Loan":
             st.info("Rate: KIBOR + 5%")
         elif product == "Business Loan":
-            st.info("Rate: 35% amortized (same as personal loan)")
+            st.info("Rate: 35% amortized")

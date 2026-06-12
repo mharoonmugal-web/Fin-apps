@@ -115,8 +115,7 @@ if cnic_digits:
     else:
         formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:12] + "-" + cnic_digits[12:]
 
-    cnic = c2.text_input("CNIC (xxxxx-xxxxxxx-x)", max_chars=15)
-
+    
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
 c4, c5, c6 = st.columns(3)

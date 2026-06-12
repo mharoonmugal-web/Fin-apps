@@ -115,10 +115,11 @@ if cnic_digits:
     else:
         formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:12] + "-" + cnic_digits[12:]
 
-    c2.text_input("Formatted CNIC", value=formatted_cnic, disabled=True)
+    cnic = c2.text_input("CNIC (xxxxx-xxxxxxx-x)", max_chars=15)
 
-if cnic_input and len(cnic_digits) != 13:
-    c2.error("CNIC must be 13 digits")
+if cnic:
+    if not re.fullmatch(r"\d{5}-\d{7}-\d", cnic):
+        c2.error("Invalid CNIC format")
 
 gender = c3.selectbox("Gender", ["Male", "Female"])
 

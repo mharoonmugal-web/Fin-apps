@@ -191,7 +191,7 @@ st.dataframe(
     use_container_width=True
 )
 
-    st.download_button(
+st.download_button(
         "Download Schedule",
         df.to_csv(index=False),
         "schedule.csv",

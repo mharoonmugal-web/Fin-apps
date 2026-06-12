@@ -12,7 +12,7 @@ KIBOR = 12.96 / 100
 
 PRODUCTS = {
     "Personal Loan": {"rate": 0.35, "max_tenor": 5, "fee": "PKR 2,500"},
-    "Auto Loan": {"rate": KIBOR + 0.05, "max_tenor": 5, "fee": "PKR 8,000"},
+    "Auto Loan": {"rate": KIBOR + 0.05, "max_tenor": 10, "fee": "PKR 8,000"},
     "Home Loan": {"rate": KIBOR + 0.03, "max_tenor": 20, "fee": "PKR 12,000"},
     "Solar Loan": {"rate": KIBOR + 0.05, "max_tenor": 8, "fee": "PKR 5,000"},
     "Business Loan": {"rate": 0.35, "max_tenor": 5, "fee": "TBA"},
@@ -25,10 +25,35 @@ DBR = {
 }
 
 BANKS = [
-    "Habib Bank Limited", "United Bank Limited", "Muslim Commercial Bank", "Allied Bank Limited", "Bank Alfalah",
-    "Meezan Bank", "Bank Al Habib", "Faysal Bank", "The Bank of Punjab", 
+    "Habib Bank Limited", "United Bank Limited", "Muslim Commercial Bank",
+    "Allied Bank Limited", "Bank Alfalah", "Meezan Bank",
+    "Bank Al Habib", "Faysal Bank", "The Bank of Punjab",
     "Askari Bank", "JS Bank", "Soneri Bank"
 ]
+
+# -----------------------------
+# CREDIT POLICY ENGINE
+# -----------------------------
+
+def get_policy(product, staff):
+    policy = {}
+
+    base = PRODUCTS[product]
+
+    policy["rate"] = base["rate"]
+    policy["max_tenor"] = base["max_tenor"]
+    policy["equity_required"] = True
+
+    if staff:
+        policy["rate"] = 0.05  # staff fixed rate
+
+        if product == "Personal Loan":
+            policy["max_tenor"] = 8
+
+        if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
+            policy["equity_required"] = False
+
+    return policy
 
 # -----------------------------
 # FUNCTIONS
@@ -58,9 +83,7 @@ def schedule(p, r, n, e):
 
         data.append([i, e, principal, interest, max(bal, 0)])
 
-    return pd.DataFrame(data, columns=[
-        "Month", "EMI", "Principal", "Markup", "Balance"
-    ])
+    return pd.DataFrame(data, columns=["Month", "EMI", "Principal", "Markup", "Balance"])
 
 # -----------------------------
 # UI
@@ -86,6 +109,16 @@ profession = c4.selectbox("Profession", list(DBR.keys()))
 income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
+# -----------------------------
+# STAFF LOAN
+# -----------------------------
+
+staff_loan = st.checkbox("Staff Loan")
+
+# -----------------------------
+# BANKING
+# -----------------------------
+
 st.header("Banking Relationship")
 
 b1, b2 = st.columns(2)
@@ -93,12 +126,19 @@ b1, b2 = st.columns(2)
 bank = b1.selectbox("Bank", BANKS)
 bank_years = b2.number_input("Relationship Years", min_value=0)
 
+# -----------------------------
+# PRODUCT
+# -----------------------------
+
 st.header("Loan Product")
 
 product = st.selectbox("Select Product", list(PRODUCTS.keys()))
 
-rate = PRODUCTS[product]["rate"]
-max_tenor = PRODUCTS[product]["max_tenor"]
+policy = get_policy(product, staff_loan)
+
+rate_used = policy["rate"]
+max_tenor = policy["max_tenor"]
+equity_required = policy["equity_required"]
 
 tenor = st.selectbox("Tenor (Years)", list(range(1, max_tenor + 1)))
 months = tenor * 12
@@ -118,20 +158,18 @@ else:
     purpose = st.text_input("Purpose")
 
 # -----------------------------
-# ASSET LOGIC
+# ASSET SECTION
 # -----------------------------
 
 asset = 0
-equity = 0
+equity_pct = 0
+equity_amount = 0
 
 if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
-    st.header("Asset Details")
-    asset = st.number_input("Asset Value (PKR)", min_value=0)
 
-    if product == "Auto Loan":
-        equity = st.slider("Equity %", 30, 50, 30)
-    elif product in ["Home Loan", "Solar Loan"]:
-        equity = st.slider("Equity %", 20, 50, 20)
+    st.header("Asset Details")
+
+    asset = st.number_input("Asset Value (PKR)", min_value=0)
 
 # -----------------------------
 # CALCULATION
@@ -142,13 +180,29 @@ if st.button("Calculate Eligibility"):
     dbr_limit = DBR[profession]
     max_emi = income * dbr_limit
 
-    max_loan_dbr = loan_from_emi(max_emi, rate, months)
+    max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
 
-    asset_loan = asset * (1 - equity / 100) if product in ["Auto Loan", "Home Loan", "Solar Loan"] else max_loan_dbr
+    # -------------------------
+    # EQUITY LOGIC
+    # -------------------------
+
+    if product in ["Auto Loan", "Home Loan", "Solar Loan"] and equity_required:
+
+        if product == "Auto Loan":
+            equity_pct = 30
+        else:
+            equity_pct = 20
+
+        equity_amount = asset * equity_pct / 100
+        asset_loan = asset * (1 - equity_pct / 100)
+
+    else:
+        asset_loan = max_loan_dbr
+        equity_amount = 0
 
     approved = min(max_loan_dbr, asset_loan)
 
-    emi_value = emi(approved, rate, months)
+    emi_value = emi(approved, rate_used, months)
     total = emi_value * months
     markup = total - approved
 
@@ -172,25 +226,29 @@ if st.button("Calculate Eligibility"):
     st.write("Total Repayment:", f"PKR {total:,.0f}")
     st.write("Markup:", f"PKR {markup:,.0f}")
 
-       # -----------------------------
+    # -----------------------------
+    # EQUITY DISPLAY
+    # -----------------------------
+
+    if product in ["Auto Loan", "Home Loan", "Solar Loan"] and equity_required:
+        st.subheader("Equity Details")
+        st.write("Equity %:", f"{equity_pct}%")
+        st.write("Equity Amount:", f"PKR {equity_amount:,.0f}")
+
+    # -----------------------------
     # AMORTIZATION
     # -----------------------------
 
     st.subheader("Amortization Schedule")
 
-    df = schedule(approved, rate, months, emi_value)
+    df = schedule(approved, rate_used, months, emi_value)
 
     formatted_df = df.copy()
 
     for col in ["EMI", "Principal", "Markup", "Balance"]:
-        formatted_df[col] = formatted_df[col].apply(
-            lambda x: f"{x:,.0f}"
-        )
+        formatted_df[col] = formatted_df[col].apply(lambda x: f"{x:,.0f}")
 
-    st.dataframe(
-        formatted_df,
-        use_container_width=True
-    )
+    st.dataframe(formatted_df, use_container_width=True)
 
     st.download_button(
         "Download Schedule",
@@ -209,19 +267,16 @@ if st.button("Calculate Eligibility"):
     st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
     st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
 
-    if product == "Personal Loan":
-        st.info("Rate: 35% amortized")
-
-    elif product == "Auto Loan":
-        st.info("Rate: KIBOR + 5%")
-
-    elif product == "Home Loan":
-        st.info("Rate: KIBOR + 3%")
-
-    elif product == "Solar Loan":
-        st.info("Rate: KIBOR + 5%")
-
-    elif product == "Business Loan":
-        st.info("Rate: 35% amortized (same as personal loan)")
-elif product == "Business Loan":
-     st.info("Rate: 35% amortized (same as personal loan)")
+    if staff_loan:
+        st.info("Staff Pricing: 5% fixed rate applied")
+    else:
+        if product == "Personal Loan":
+            st.info("Rate: 35% amortized")
+        elif product == "Auto Loan":
+            st.info("Rate: KIBOR + 5%")
+        elif product == "Home Loan":
+            st.info("Rate: KIBOR + 3%")
+        elif product == "Solar Loan":
+            st.info("Rate: KIBOR + 5%")
+        elif product == "Business Loan":
+            st.info("Rate: 35% amortized (same as personal loan)")

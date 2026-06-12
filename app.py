@@ -217,4 +217,4 @@ elif product == "Home Loan":
 elif product == "Solar Loan":
         st.info("Rate: KIBOR + 5%")
 elif product == "Business Loan":
-st.info("Rate: 35% amortized (same as personal loan)")
+     st.info("Rate: 35% amortized (same as personal loan)")

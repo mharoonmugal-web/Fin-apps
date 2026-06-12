@@ -49,7 +49,8 @@ def get_policy(product, staff):
 
         if product == "Personal Loan":
             policy["max_tenor"] = 7
-        elif product in ["Auto Loan", "Home Loan", "Solar Loan"]:
+
+        if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
             policy["equity_required"] = False
 
     return policy
@@ -109,25 +110,17 @@ income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
 # -----------------------------
-# STAFF SECTION (UPDATED)
+# STAFF SECTION
 # -----------------------------
 
 staff_loan = st.checkbox("Staff Loan")
 
 basic_salary = 0
+service_years = 0
+service_months = 0
+
 if staff_loan:
     basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
-
-# -----------------------------
-# BANKING
-# -----------------------------
-
-st.header("Banking Relationship")
-
-b1, b2 = st.columns(2)
-
-bank = b1.selectbox("Bank", BANKS)
-bank_years = b2.number_input("Relationship Years", min_value=0)
 
 # -----------------------------
 # PRODUCT
@@ -140,8 +133,27 @@ product = st.selectbox("Select Product", list(PRODUCTS.keys()))
 policy = get_policy(product, staff_loan)
 
 rate_used = policy["rate"]
-max_tenor = policy["max_tenor"]
 equity_required = policy["equity_required"]
+
+# -----------------------------
+# STAFF HOME LOAN SERVICE RULE
+# -----------------------------
+
+max_tenor = policy["max_tenor"]
+
+if staff_loan and product == "Home Loan":
+    st.subheader("Remaining Service Details")
+    service_years = st.number_input("Remaining Service (Years)", min_value=0, step=1)
+    service_months = st.number_input("Remaining Service (Months)", min_value=0, max_value=11, step=1)
+
+    total_service_months = service_years * 12 + service_months
+    service_cap_years = min(25, total_service_months // 12)
+
+    max_tenor = min(max_tenor, service_cap_years)
+
+# -----------------------------
+# TENOR
+# -----------------------------
 
 tenor = st.selectbox("Tenor (Years)", list(range(1, max_tenor + 1)))
 months = tenor * 12
@@ -181,10 +193,11 @@ if st.button("Calculate Eligibility"):
 
     dbr_limit = DBR[profession]
     max_emi = income * dbr_limit
+
     max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
 
     # -------------------------
-    # STAFF SALARY CAP LOGIC (NEW)
+    # STAFF SALARY CAP
     # -------------------------
 
     if staff_loan:
@@ -283,7 +296,6 @@ if st.button("Calculate Eligibility"):
 
     if staff_loan:
         st.info("Staff Pricing: 5% fixed rate applied")
-        st.info("Staff Benefit: No processing fee for personal loans")
     else:
         if product == "Personal Loan":
             st.info("Rate: 35% amortized")

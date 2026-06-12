@@ -203,7 +203,7 @@ st.download_button(
     # ENDNOTES
     # -----------------------------
 
-    st.subheader("Bank Notes")
+st.subheader("Bank Notes")
 
     st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
     st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")

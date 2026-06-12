@@ -178,14 +178,7 @@ if st.button("Calculate Eligibility"):
 
     st.subheader("Amortization Schedule")
 
-    df = schedule(approved, rate, months, emi_value)
-    formatted_df = df.copy()
-
-for col in ["EMI", "Principal", "Markup", "Balance"]:
-    
-    formatted_df[col] = formatted_df[col].apply(
-        lambda x: f"{x:,.0f}"
-    )
+df = schedule(approved, rate, months, emi_value)
 
 formatted_df = df.copy()
 

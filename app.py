@@ -183,7 +183,7 @@ if st.button("Calculate Eligibility"):
 
 for col in ["EMI", "Principal", "Markup", "Balance"]:
     
-    formatted_df[col] = formatted_df[col].apply(
+formatted_df[col] = formatted_df[col].apply(
         lambda x: f"{x:,.0f}"
     )
 

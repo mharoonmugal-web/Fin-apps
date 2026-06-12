@@ -115,7 +115,7 @@ if cnic_digits:
     else:
         formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:12] + "-" + cnic_digits[12:]
 
-    c2.write("Formatted: " + formatted_cnic)
+    c2.text_input("Formatted CNIC", value=formatted_cnic, disabled=True)
 
 if cnic_input and len(cnic_digits) != 13:
     c2.error("CNIC must be 13 digits")

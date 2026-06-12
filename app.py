@@ -117,10 +117,6 @@ if cnic_digits:
 
     cnic = c2.text_input("CNIC (xxxxx-xxxxxxx-x)", max_chars=15)
 
-if cnic:
-    if not re.fullmatch(r"\d{5}-\d{7}-\d", cnic):
-        c2.error("Invalid CNIC format")
-
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
 c4, c5, c6 = st.columns(3)

@@ -130,15 +130,25 @@ remaining_service_years = 0
 if staff_loan:
     basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
 
+    # -----------------------------
+# STAFF HOME LOAN SERVICE LOGIC (ONLY FOR HOME LOAN)
+# -----------------------------
+
+remaining_service_years = 0
+
+if staff_loan and product == "Home Loan":
+
+    st.subheader("Service Details (Staff Home Loan Only)")
+
     dob = st.date_input("Date of Birth")
     doj = st.date_input("Date of Joining")
 
-    # calculate remaining service (retirement 60)
     today = datetime.today().date()
 
-    age_years = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    # retirement based on DOB
     retirement_year = dob.year + RETIREMENT_AGE
 
+    # remaining service until retirement
     remaining_service_years = max(0, retirement_year - today.year)
     # -----------------------------
 # PRODUCT SELECTION

@@ -34,30 +34,6 @@ BANKS = [
 ]
 
 # -----------------------------
-# CREDIT POLICY ENGINE
-# -----------------------------
-
-def get_policy(product, staff):
-    base = PRODUCTS[product]
-
-    policy = {
-        "rate": base["rate"],
-        "max_tenor": base["max_tenor"],
-        "equity_required": True
-    }
-
-    if staff:
-        policy["rate"] = 0.05
-
-        if product == "Personal Loan":
-            policy["max_tenor"] = 7
-
-        if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
-            policy["equity_required"] = False
-
-    return policy
-
-# -----------------------------
 # FUNCTIONS
 # -----------------------------
 
@@ -99,13 +75,19 @@ c1, c2, c3 = st.columns(3)
 
 name = c1.text_input("Full Name")
 
-# CNIC
-cnic_input = c2.text_input("CNIC (13 digits)")
+# -----------------------------
+# CNIC (STRICT VALIDATION)
+# -----------------------------
 
-cnic_digits = re.sub(r"\D", "", cnic_input)[:13]
+cnic_raw = c2.text_input("CNIC (13 digits only)")
 
-if cnic_input and len(cnic_digits) != 13:
-    c2.error("CNIC must be 13 digits")
+cnic_digits = re.sub(r"\D", "", cnic_raw)
+
+if cnic_raw:
+    if len(cnic_digits) != 13:
+        c2.error("CNIC must be exactly 13 digits")
+    elif not cnic_digits.isdigit():
+        c2.error("CNIC must contain numbers only")
 
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
@@ -123,51 +105,53 @@ staff_loan = st.checkbox("Staff Loan")
 
 basic_salary = 0
 
-dob = None
-doj = None
-remaining_service_years = 0
-
 if staff_loan:
     basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
 
-    # -----------------------------
-# STAFF HOME LOAN SERVICE LOGIC (ONLY FOR HOME LOAN)
+# -----------------------------
+# PRODUCT
+# -----------------------------
+
+st.header("Loan Product")
+
+product = st.selectbox("Select Product", list(PRODUCTS.keys()))
+# -----------------------------
+# POLICY
+# -----------------------------
+
+rate_used = PRODUCTS[product]["rate"]
+max_tenor = PRODUCTS[product]["max_tenor"]
+equity_required = True
+
+if staff_loan:
+    rate_used = 0.05
+
+    if product == "Personal Loan":
+        max_tenor = 7
+
+    if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
+        equity_required = False
+
+# -----------------------------
+# STAFF HOME LOAN SERVICE LOGIC
 # -----------------------------
 
 remaining_service_years = 0
 
-    st.subheader("Service Details (Staff Home Loan Only)")
+if staff_loan and product == "Home Loan":
+
+    st.subheader("Staff Service Details (Home Loan Only)")
 
     dob = st.date_input("Date of Birth")
     doj = st.date_input("Date of Joining")
 
     today = datetime.today().date()
 
-    # retirement based on DOB
     retirement_year = dob.year + RETIREMENT_AGE
 
-    # remaining service until retirement
     remaining_service_years = max(0, retirement_year - today.year)
-    # -----------------------------
-# PRODUCT SELECTION
-# -----------------------------
 
-st.header("Loan Product")
-
-product = st.selectbox("Select Product", list(PRODUCTS.keys()))
-
-policy = get_policy(product, staff_loan)
-
-rate_used = policy["rate"]
-max_tenor = policy["max_tenor"]
-equity_required = policy["equity_required"]
-
-# -----------------------------
-# STAFF HOME LOAN TENOR FIX (NEW LOGIC)
-# -----------------------------
-
-if staff_loan and product == "Home Loan":
-    max_tenor = min(25, remaining_service_years if remaining_service_years > 0 else 25)
+    max_tenor = min(25, remaining_service_years)
 
 # -----------------------------
 # TENOR
@@ -188,7 +172,7 @@ else:
     purpose = st.text_input("Purpose")
 
 # -----------------------------
-# ASSET DETAILS
+# ASSET
 # -----------------------------
 
 asset = 0

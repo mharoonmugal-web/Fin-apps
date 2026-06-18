@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+from datetime import datetime
 
 st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 
@@ -9,6 +10,7 @@ st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 # -----------------------------
 
 KIBOR = 12.96 / 100
+RETIREMENT_AGE = 60
 
 PRODUCTS = {
     "Personal Loan": {"rate": 0.35, "max_tenor": 5, "fee": "PKR 2,500"},
@@ -97,25 +99,14 @@ c1, c2, c3 = st.columns(3)
 
 name = c1.text_input("Full Name")
 
-# -----------------------------
-# CNIC AUTO FORMAT (FIXED)
-# -----------------------------
-
+# CNIC
 cnic_input = c2.text_input("CNIC (13 digits)")
 
 cnic_digits = re.sub(r"\D", "", cnic_input)[:13]
 
-formatted_cnic = ""
+if cnic_input and len(cnic_digits) != 13:
+    c2.error("CNIC must be 13 digits")
 
-if cnic_digits:
-    if len(cnic_digits) <= 5:
-        formatted_cnic = cnic_digits
-    elif len(cnic_digits) <= 12:
-        formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:]
-    else:
-        formatted_cnic = cnic_digits[:5] + "-" + cnic_digits[5:12] + "-" + cnic_digits[12:]
-
-    
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
 c4, c5, c6 = st.columns(3)
@@ -131,14 +122,26 @@ experience = c6.number_input("Experience (Years)", min_value=0)
 staff_loan = st.checkbox("Staff Loan")
 
 basic_salary = 0
-service_years = 0
-service_months = 0
+
+dob = None
+doj = None
+remaining_service_years = 0
 
 if staff_loan:
     basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
 
-# -----------------------------
-# PRODUCT
+    dob = st.date_input("Date of Birth")
+    doj = st.date_input("Date of Joining")
+
+    # calculate remaining service (retirement 60)
+    today = datetime.today().date()
+
+    age_years = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    retirement_year = dob.year + RETIREMENT_AGE
+
+    remaining_service_years = max(0, retirement_year - today.year)
+    # -----------------------------
+# PRODUCT SELECTION
 # -----------------------------
 
 st.header("Loan Product")
@@ -152,20 +155,11 @@ max_tenor = policy["max_tenor"]
 equity_required = policy["equity_required"]
 
 # -----------------------------
-# HOME LOAN STAFF TENOR RULE
+# STAFF HOME LOAN TENOR FIX (NEW LOGIC)
 # -----------------------------
 
 if staff_loan and product == "Home Loan":
-
-    st.subheader("Remaining Service Details")
-
-    service_years = st.number_input("Remaining Service (Years)", min_value=0, step=1)
-    service_months = st.number_input("Remaining Service (Months)", min_value=0, max_value=11)
-
-    total_service_months = service_years * 12 + service_months
-    service_cap_years = total_service_months // 12
-
-    max_tenor = min(max_tenor, 25, service_cap_years)
+    max_tenor = min(25, remaining_service_years if remaining_service_years > 0 else 25)
 
 # -----------------------------
 # TENOR
@@ -186,7 +180,7 @@ else:
     purpose = st.text_input("Purpose")
 
 # -----------------------------
-# ASSET
+# ASSET DETAILS
 # -----------------------------
 
 asset = 0
@@ -238,11 +232,15 @@ if st.button("Calculate Eligibility"):
             equity_pct = 20
 
         equity_amount = asset * equity_pct / 100
-        asset_loan = asset * (1 - equity_pct / 100)
+        asset_loan = asset - equity_amount
 
     else:
         asset_loan = cap
         equity_amount = 0
+
+    # -------------------------
+    # FINAL APPROVAL
+    # -------------------------
 
     approved = min(max_loan_dbr, asset_loan, cap)
 
@@ -307,6 +305,10 @@ if st.button("Calculate Eligibility"):
     # -----------------------------
 
     st.subheader("Bank Notes")
+
+    st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
+
+    st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
 
     if staff_loan:
         st.info("Staff Pricing: 5% fixed rate applied")

@@ -136,8 +136,6 @@ if staff_loan:
 
 remaining_service_years = 0
 
-if staff_loan and product == "Home Loan":
-
     st.subheader("Service Details (Staff Home Loan Only)")
 
     dob = st.date_input("Date of Birth")

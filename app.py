@@ -26,15 +26,8 @@ DBR = {
     "Businessman": 0.50,
 }
 
-BANKS = [
-    "Habib Bank Limited", "United Bank Limited", "Muslim Commercial Bank",
-    "Allied Bank Limited", "Bank Alfalah", "Meezan Bank",
-    "Bank Al Habib", "Faysal Bank", "The Bank of Punjab",
-    "Askari Bank", "JS Bank", "Soneri Bank"
-]
-
 # -----------------------------
-# FUNCTIONS
+# CORE FUNCTIONS
 # -----------------------------
 
 def emi(p, r, n):
@@ -76,18 +69,18 @@ c1, c2, c3 = st.columns(3)
 name = c1.text_input("Full Name")
 
 # -----------------------------
-# CNIC (STRICT VALIDATION)
+# CNIC (STRICT + BLOCKING)
 # -----------------------------
 
 cnic_raw = c2.text_input("CNIC (13 digits only)")
 
 cnic_digits = re.sub(r"\D", "", cnic_raw)
 
+cnic_valid = len(cnic_digits) == 13
+
 if cnic_raw:
-    if len(cnic_digits) != 13:
-        c2.error("CNIC must be exactly 13 digits")
-    elif not cnic_digits.isdigit():
-        c2.error("CNIC must contain numbers only")
+    if not cnic_valid:
+        c2.error("CNIC must be exactly 13 digits (numbers only)")
 
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
@@ -115,32 +108,19 @@ if staff_loan:
 st.header("Loan Product")
 
 product = st.selectbox("Select Product", list(PRODUCTS.keys()))
-# -----------------------------
-# POLICY
-# -----------------------------
 
 rate_used = PRODUCTS[product]["rate"]
 max_tenor = PRODUCTS[product]["max_tenor"]
-equity_required = True
-
-if staff_loan:
-    rate_used = 0.05
-
-    if product == "Personal Loan":
-        max_tenor = 7
-
-    if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
-        equity_required = False
 
 # -----------------------------
-# STAFF HOME LOAN SERVICE LOGIC
+# STAFF HOME LOAN LOGIC (FIXED)
 # -----------------------------
 
-remaining_service_years = 0
+max_allowed_tenor = max_tenor
 
 if staff_loan and product == "Home Loan":
 
-    st.subheader("Staff Service Details (Home Loan Only)")
+    st.subheader("Staff Home Loan Eligibility Inputs")
 
     dob = st.date_input("Date of Birth")
     doj = st.date_input("Date of Joining")
@@ -148,40 +128,18 @@ if staff_loan and product == "Home Loan":
     today = datetime.today().date()
 
     retirement_year = dob.year + RETIREMENT_AGE
-
     remaining_service_years = max(0, retirement_year - today.year)
 
-    max_tenor = min(25, remaining_service_years)
+    max_allowed_tenor = min(25, remaining_service_years)
+
+    st.info(f"Max allowable tenor based on service: {max_allowed_tenor} years")
 
 # -----------------------------
 # TENOR
 # -----------------------------
 
-tenor = st.selectbox("Tenor (Years)", list(range(1, max_tenor + 1)))
+tenor = st.selectbox("Tenor (Years)", list(range(1, max_allowed_tenor + 1)))
 months = tenor * 12
-
-# -----------------------------
-# PURPOSE
-# -----------------------------
-
-if product == "Personal Loan":
-    purpose = st.selectbox("Purpose", ["Domestic", "Travel", "Marriage", "Education", "Other"])
-    if purpose == "Other":
-        purpose = st.text_input("Specify Purpose")
-else:
-    purpose = st.text_input("Purpose")
-
-# -----------------------------
-# ASSET
-# -----------------------------
-
-asset = 0
-equity_pct = 0
-equity_amount = 0
-
-if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
-    st.header("Asset Details")
-    asset = st.number_input("Asset Value (PKR)", min_value=0)
 
 # -----------------------------
 # CALCULATION
@@ -189,15 +147,17 @@ if product in ["Auto Loan", "Home Loan", "Solar Loan"]:
 
 if st.button("Calculate Eligibility"):
 
+    # CNIC BLOCK
+    if not cnic_valid:
+        st.error("Invalid CNIC. Please correct before proceeding.")
+        st.stop()
+
     dbr_limit = DBR[profession]
     max_emi = income * dbr_limit
 
     max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
 
-    # -------------------------
-    # STAFF CAPS
-    # -------------------------
-
+    # STAFF CAP RULES
     if staff_loan:
         if product == "Personal Loan":
             cap = basic_salary * 8
@@ -212,29 +172,7 @@ if st.button("Calculate Eligibility"):
     else:
         cap = max_loan_dbr
 
-    # -------------------------
-    # EQUITY LOGIC
-    # -------------------------
-
-    if product in ["Auto Loan", "Home Loan", "Solar Loan"] and equity_required:
-
-        if product == "Auto Loan":
-            equity_pct = 30
-        else:
-            equity_pct = 20
-
-        equity_amount = asset * equity_pct / 100
-        asset_loan = asset - equity_amount
-
-    else:
-        asset_loan = cap
-        equity_amount = 0
-
-    # -------------------------
-    # FINAL APPROVAL
-    # -------------------------
-
-    approved = min(max_loan_dbr, asset_loan, cap)
+    approved = cap
 
     emi_value = emi(approved, rate_used, months)
     total = emi_value * months
@@ -261,15 +199,6 @@ if st.button("Calculate Eligibility"):
     st.write("Markup:", f"PKR {markup:,.0f}")
 
     # -----------------------------
-    # EQUITY DISPLAY
-    # -----------------------------
-
-    if product in ["Auto Loan", "Home Loan", "Solar Loan"] and equity_required:
-        st.subheader("Equity Details")
-        st.write("Equity %:", f"{equity_pct}%")
-        st.write("Equity Amount:", f"PKR {equity_amount:,.0f}")
-
-    # -----------------------------
     # AMORTIZATION
     # -----------------------------
 
@@ -293,25 +222,15 @@ if st.button("Calculate Eligibility"):
     )
 
     # -----------------------------
-    # ENDNOTES
+    # END NOTES
     # -----------------------------
 
     st.subheader("Bank Notes")
 
     st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
-
     st.info(f"Processing Fee: {PRODUCTS[product]['fee']}")
 
     if staff_loan:
         st.info("Staff Pricing: 5% fixed rate applied")
     else:
-        if product == "Personal Loan":
-            st.info("Rate: 35% amortized")
-        elif product == "Auto Loan":
-            st.info("Rate: KIBOR + 5%")
-        elif product == "Home Loan":
-            st.info("Rate: KIBOR + 3%")
-        elif product == "Solar Loan":
-            st.info("Rate: KIBOR + 5%")
-        elif product == "Business Loan":
-            st.info("Rate: 35% amortized")
+        st.info(f"Market Rate Applied: {rate_used:.2%}")

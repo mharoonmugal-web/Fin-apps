@@ -322,7 +322,6 @@ if product == "Business Loan":
 st.subheader("Amortization Schedule")
 
 df = schedule(approved, rate_used, months, emi_value)
-
 formatted_df = df.copy()
 
 for col in ["EMI", "Principal", "Markup", "Balance"]:

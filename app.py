@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import re
-from datetime import date
 
 st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 
@@ -10,7 +9,6 @@ st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 # -----------------------------
 
 KIBOR = 12.96 / 100
-RETIREMENT_AGE = 60
 
 DBR = {
     "Salaried": 0.40,
@@ -19,44 +17,20 @@ DBR = {
 }
 
 PRODUCTS = {
-    "Personal Loan": {
-        "rate": 0.35,
-        "max_tenor": 5,
-        "fee": "PKR 2,500",
-        "equity": False
-    },
-    "Auto Loan": {
-        "rate": KIBOR + 0.05,
-        "max_tenor": 10,
-        "fee": "PKR 8,000",
-        "equity": True
-    },
-    "Home Loan": {
-        "rate": KIBOR + 0.03,
-        "max_tenor": 20,
-        "fee": "PKR 12,000",
-        "equity": True
-    },
-    "Solar Loan": {
-        "rate": KIBOR + 0.05,
-        "max_tenor": 8,
-        "fee": "PKR 5,000",
-        "equity": True
-    },
-    "Business Loan": {
-        "rate": 0.35,
-        "max_tenor": 5,
-        "fee": "TBA",
-        "equity": False
-    }
+    "Personal Loan": {"rate": 0.35, "max_tenor": 5, "fee": "PKR 2,500", "equity": False},
+    "Auto Loan": {"rate": KIBOR + 0.05, "max_tenor": 10, "fee": "PKR 8,000", "equity": True},
+    "Home Loan": {"rate": KIBOR + 0.03, "max_tenor": 20, "fee": "PKR 12,000", "equity": True},
+    "Solar Loan": {"rate": KIBOR + 0.05, "max_tenor": 8, "fee": "PKR 5,000", "equity": True},
+    "Business Loan": {"rate": 0.35, "max_tenor": 5, "fee": "TBA", "equity": False},
 }
 
 BANKS = [
     "Habib Bank Limited", "United Bank Limited", "MCB Bank",
-    "Allied Bank", "Bank Alfalah", "Meezan Bank",
+    "Allied Bank Limited", "Bank Alfalah", "Meezan Bank",
     "Bank Al Habib", "Faysal Bank", "The Bank of Punjab",
     "Askari Bank", "JS Bank", "Soneri Bank"
 ]
+
 # -----------------------------
 # FUNCTIONS
 # -----------------------------
@@ -82,7 +56,6 @@ def schedule(p, r, n, e):
         interest = bal * m
         principal = e - interest
         bal -= principal
-
         rows.append([i, e, principal, interest, max(bal, 0)])
 
     return pd.DataFrame(rows, columns=["Month", "EMI", "Principal", "Markup", "Balance"])
@@ -93,24 +66,18 @@ def schedule(p, r, n, e):
 # -----------------------------
 
 st.title("Digital Credit Engine")
-
 st.header("Applicant Information")
 
 c1, c2, c3 = st.columns(3)
 
 name = c1.text_input("Full Name")
 
-# -----------------------------
-# CNIC (STRICT VALIDATION)
-# -----------------------------
-
 cnic_raw = c2.text_input("CNIC (13 digits only)")
-
 cnic_digits = re.sub(r"\D", "", cnic_raw)[:13]
 cnic_valid = len(cnic_digits) == 13
 
 if cnic_raw and not cnic_valid:
-    c2.error("CNIC must be exactly 13 digits (numbers only)")
+    c2.error("CNIC must be exactly 13 digits")
 
 gender = c3.selectbox("Gender", ["Male", "Female"])
 
@@ -120,51 +87,37 @@ profession = c4.selectbox("Profession", list(DBR.keys()))
 income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
-# -----------------------------
-# STAFF LOGIC
-# -----------------------------
-
-staff_allowed = (profession == "Salaried")
-
 staff_loan = False
-if staff_allowed:
+basic_salary = 0
+
+if profession == "Salaried":
     staff_loan = st.checkbox("Staff Loan")
 
-basic_salary = 0
 if staff_loan:
     basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
-    # -----------------------------
+
+
+# -----------------------------
 # PRODUCT FILTERING
 # -----------------------------
 
 if profession == "Salaried":
     allowed_products = ["Personal Loan", "Auto Loan", "Home Loan", "Solar Loan"]
-
-elif profession == "Staff" or staff_loan:
-    allowed_products = ["Personal Loan", "Auto Loan", "Home Loan", "Solar Loan"]
-
 elif profession == "Self-Employed":
     allowed_products = ["Personal Loan", "Auto Loan", "Home Loan", "Solar Loan", "Business Loan"]
-
 else:
     allowed_products = ["Personal Loan", "Auto Loan", "Home Loan", "Solar Loan", "Business Loan"]
 
-# -----------------------------
-# PRODUCT SELECTION
-# -----------------------------
-
 st.header("Loan Product")
-
 product = st.selectbox("Select Product", allowed_products)
 
 base_rate = PRODUCTS[product]["rate"]
 max_tenor_base = PRODUCTS[product]["max_tenor"]
 processing_fee = PRODUCTS[product]["fee"]
-
-equity_applicable = PRODUCTS[product]["equity"]
+equity_flag = PRODUCTS[product]["equity"]
 
 # -----------------------------
-# STAFF POLICY OVERRIDES
+# STAFF OVERRIDES
 # -----------------------------
 
 staff_rate = 0.05
@@ -177,66 +130,59 @@ staff_tenor_map = {
 
 if staff_loan:
     rate_used = staff_rate
-    max_tenor = staff_tenor_map.get(product, max_tenor_base)
+    tenor_fixed = staff_tenor_map[product]
 else:
     rate_used = base_rate
-    max_tenor = max_tenor_base
+    tenor_fixed = None
 
 # -----------------------------
-# TENOR
+# LOAN MODE
 # -----------------------------
 
-tenor = st.selectbox("Tenor (Years)", list(range(1, max_tenor + 1)))
-months = tenor * 12
-
-# -----------------------------
-# LOAN MODE SELECTION
-# -----------------------------
-
-st.header("Loan Request Mode")
-
-mode = st.radio(
-    "Select Mode",
-    ["Desired Loan Amount", "Maximum Eligibility"]
-)
+mode = st.radio("Loan Mode", ["Desired Loan Amount", "Maximum Eligibility"])
 
 desired_amount = 0
+
 if mode == "Desired Loan Amount":
     desired_amount = st.number_input("Desired Loan Amount (PKR)", min_value=0)
 
-purpose = st.text_input("Loan Purpose")
 
 # -----------------------------
-# ASSET & EQUITY
+# EQUITY (NON-STAFF ONLY)
 # -----------------------------
 
 asset_value = 0
 equity_pct = 0
 equity_amount = 0
 
-if equity_applicable:
+if equity_flag and not staff_loan:
     asset_value = st.number_input("Asset Value (PKR)", min_value=0)
     equity_pct = st.slider("Equity %", 20, 50, 20)
     equity_amount = asset_value * equity_pct / 100
-    # -----------------------------
-# CALCULATION ENGINE
+
+
+# -----------------------------
+# EXECUTION BLOCK
 # -----------------------------
 
 if st.button("Run Credit Assessment"):
 
     if not cnic_valid:
-        st.error("Invalid CNIC. Cannot proceed.")
+        st.error("Invalid CNIC")
         st.stop()
 
     dbr_limit = DBR[profession]
-    max_emi_allowed = income * dbr_limit
+    max_emi = income * dbr_limit
 
-    max_loan_dbr = loan_from_emi(max_emi_allowed, rate_used, months)
+    tenor = tenor_fixed if staff_loan else st.selectbox(
+        "Tenor (Years)", list(range(1, max_tenor_base + 1))
+    )
 
-    # -----------------------------
-    # STAFF CAPS
-    # -----------------------------
+    months = tenor * 12
 
+    max_loan = loan_from_emi(max_emi, rate_used, months)
+
+    # CAP LOGIC
     if staff_loan:
         if product == "Personal Loan":
             cap = basic_salary * 8
@@ -245,136 +191,67 @@ if st.button("Run Credit Assessment"):
         elif product == "Home Loan":
             cap = basic_salary * 150
         elif product == "Solar Loan":
-            cap = min(3_000_000, max_loan_dbr)
+            cap = min(3_000_000, max_loan)
         else:
-            cap = max_loan_dbr
+            cap = max_loan
     else:
-        cap = max_loan_dbr
-
-    # -----------------------------
-    # FINAL LOAN DECISION INPUT
-    # -----------------------------
+        cap = max_loan
 
     if mode == "Desired Loan Amount":
+        approved = min(desired_amount, cap, max_loan)
         requested = desired_amount
-
-        approved = min(requested, cap, max_loan_dbr)
-
-        status = "APPROVED" if approved == requested else "PARTIAL / REFERRED"
-
     else:
-        approved = min(cap, max_loan_dbr)
+        approved = min(cap, max_loan)
         requested = approved
-        status = "AUTO APPROVED (MAX ELIGIBILITY)"
-
-    # -----------------------------
-    # EMI CALCULATION
-    # -----------------------------
 
     emi_value = emi(approved, rate_used, months)
-    total_repayment = emi_value * months
-    markup = total_repayment - approved
+    total = emi_value * months
+    markup = total - approved
 
     dbr_actual = emi_value / income if income else 0
 
-    eligibility = dbr_actual <= dbr_limit
-
-    # -----------------------------
-    # OUTPUT SUMMARY
-    # -----------------------------
-
     st.subheader("Credit Decision Summary")
 
-    st.write("Status:", status)
-    st.write("Eligibility:", "Eligible" if eligibility else "Not Eligible")
+    st.write("Requested:", f"PKR {requested:,.0f}")
+    st.write("Approved:", f"PKR {approved:,.0f}")
+    st.write("Status:", "Eligible" if dbr_actual <= dbr_limit else "Not Eligible")
 
-    st.metric("Requested Amount", f"PKR {requested:,.0f}")
-    st.metric("Approved Amount", f"PKR {approved:,.0f}")
-    st.metric("Monthly EMI", f"PKR {emi_value:,.0f}")
-    st.metric("DBR Utilization", f"{dbr_actual*100:.2f}%")
+    st.metric("EMI", f"PKR {emi_value:,.0f}")
+    st.metric("DBR", f"{dbr_actual*100:.2f}%")
 
-    st.write("Total Repayment:", f"PKR {total_repayment:,.0f}")
+    st.write("Total Repayment:", f"PKR {total:,.0f}")
     st.write("Markup:", f"PKR {markup:,.0f}")
+
     # -----------------------------
-# BUSINESS LOAN DETAILS (ONLY IF APPLICABLE)
-# -----------------------------
+    # SCHEDULE
+    # -----------------------------
 
-if product == "Business Loan":
-    st.subheader("Business Details")
+    st.subheader("Amortization Schedule")
 
-    biz_type = st.selectbox(
-        "Nature of Business",
-        ["Retail", "Wholesale", "Manufacturing", "Services", "Trading", "Other"]
+    df = schedule(approved, rate_used, months, emi_value)
+
+    fmt = df.copy()
+    for col in ["EMI", "Principal", "Markup", "Balance"]:
+        fmt[col] = fmt[col].apply(lambda x: f"{x:,.0f}")
+
+    st.dataframe(fmt, use_container_width=True)
+
+    st.download_button(
+        "Download CSV",
+        df.to_csv(index=False),
+        "schedule.csv",
+        "text/csv"
     )
 
-    biz_years = st.number_input("Years in Business", min_value=0)
+    # -----------------------------
+    # NOTES
+    # -----------------------------
 
-    biz_desc = st.text_area(
-        "Business Description",
-        max_chars=500,
-        placeholder="Briefly describe business operations, customers, and purpose of financing"
-    )
+    st.subheader("Bank Notes")
 
-# -----------------------------
-# AMORTIZATION SCHEDULE
-# -----------------------------
+    st.info(f"Processing Fee: {processing_fee}")
+    st.info(f"Rate Applied: {rate_used:.2%}")
+    st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
 
-st.subheader("Amortization Schedule")
-
-df = schedule(approved, rate_used, months, emi_value)
-formatted_df = df.copy()
-
-for col in ["EMI", "Principal", "Markup", "Balance"]:
-    formatted_df[col] = formatted_df[col].apply(lambda x: f"{x:,.0f}")
-
-st.dataframe(formatted_df, use_container_width=True)
-
-st.download_button(
-    "Download Schedule (CSV)",
-    df.to_csv(index=False),
-    "schedule.csv",
-    "text/csv",
-    key="download_schedule"
-)
-
-# -----------------------------
-# BANK NOTES (ONLY AFTER RESULT)
-# -----------------------------
-
-st.subheader("Bank Notes & Disclosures")
-
-st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
-st.info(f"Processing Fee: {processing_fee}")
-
-if staff_loan:
-    st.info("Staff Pricing: 5% fixed rate applied")
-
-st.info(f"Interest Rate Applied: {rate_used:.2%}")
-
-# -----------------------------
-# EQUITY DISPLAY
-# -----------------------------
-
-if equity_applicable:
-    st.subheader("Equity Details")
-    st.write("Equity %:", f"{equity_pct}%")
-    st.write("Equity Amount:", f"PKR {equity_amount:,.0f}")
-
-# -----------------------------
-# FINAL POLICY SUMMARY (POST-APPROVAL ONLY)
-# -----------------------------
-
-st.subheader("Policy Summary")
-
-st.write("Maximum Tenor:", f"{max_tenor} years")
-st.write("Product Fee:", processing_fee)
-st.write("DBR Limit:", f"{dbr_limit*100:.0f}%")
-st.write("Equity Requirement:", "Yes" if equity_applicable else "No")
-
-# -----------------------------
-# FINAL NOTE
-# -----------------------------
-
-st.caption(
-    "Final approval is subject to verification of applicant information and bank credit policy compliance."
-)
+    if staff_loan:
+        st.info("Staff pricing applied (concessional rate)")

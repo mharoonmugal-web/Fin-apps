@@ -5,7 +5,7 @@ import re
 st.set_page_config(page_title="Digital Credit Engine", layout="wide")
 
 # =============================
-# CONFIG
+# CONFIGURATION
 # =============================
 
 KIBOR = 12.96 / 100
@@ -62,17 +62,17 @@ def schedule(p, r, n, e):
 
 
 # =============================
-# UI LAYER (HARD SHELL)
+# UI
 # =============================
 
 st.title("Digital Credit Engine")
-
 st.header("Applicant Information")
 
 c1, c2, c3 = st.columns(3)
 
 name = c1.text_input("Full Name")
 
+# CNIC validation
 cnic_raw = c2.text_input("CNIC (13 digits)")
 cnic_digits = re.sub(r"\D", "", cnic_raw)[:13]
 cnic_valid = len(cnic_digits) == 13
@@ -89,7 +89,7 @@ income = c5.number_input("Net Monthly Income (PKR)", min_value=0)
 experience = c6.number_input("Experience (Years)", min_value=0)
 
 # =============================
-# STAFF CONTROL
+# STAFF LOGIC
 # =============================
 
 staff_loan = False
@@ -102,7 +102,7 @@ if staff_loan:
     basic_salary = st.number_input("Basic Salary (PKR)", min_value=0)
 
 # =============================
-# PRODUCT FILTERING
+# PRODUCT SELECTION
 # =============================
 
 if profession == "Salaried":
@@ -116,8 +116,8 @@ st.header("Loan Product")
 product = st.selectbox("Select Product", allowed_products)
 
 rate_used = 0.05 if staff_loan else PRODUCTS[product]["rate"]
-
 base_tenor = PRODUCTS[product]["max_tenor"]
+equity_allowed = PRODUCTS[product]["equity"]
 
 # =============================
 # TENOR CONTROL
@@ -132,14 +132,14 @@ if staff_loan:
         "Business Loan": 5
     }
     tenor = staff_tenor[product]
-    st.info(f"Fixed Staff Tenor Applied: {tenor} Years")
+    st.info(f"Staff Fixed Tenor: {tenor} Years")
 else:
     tenor = st.selectbox("Tenor (Years)", list(range(1, base_tenor + 1)))
 
 months = tenor * 12
 
 # =============================
-# BANKING (STABLE BLOCK)
+# BANKING DETAILS
 # =============================
 
 if not staff_loan:
@@ -150,8 +150,6 @@ if not staff_loan:
 # =============================
 # ASSET + EQUITY
 # =============================
-
-equity_allowed = PRODUCTS[product]["equity"]
 
 asset_value = 0
 equity_pct = 0
@@ -164,7 +162,19 @@ if equity_allowed:
     equity_amount = asset_value * equity_pct / 100
 
 # =============================
-# EXECUTION ENGINE
+# BUSINESS LOAN DETAILS (NEW FIX)
+# =============================
+
+business_details = None
+requested_amount = 0
+
+if product == "Business Loan":
+    st.subheader("Business Information")
+    business_details = st.text_area("Brief Business Description")
+    requested_amount = st.number_input("Desired Loan Amount (PKR)", min_value=0)
+
+# =============================
+# CALCULATION ENGINE
 # =============================
 
 if st.button("Calculate Eligibility"):
@@ -177,8 +187,10 @@ if st.button("Calculate Eligibility"):
     max_emi = income * dbr_limit
     max_loan_dbr = loan_from_emi(max_emi, rate_used, months)
 
+    # asset constraint
     asset_limit = asset_value * (1 - equity_pct / 100) if equity_allowed else max_loan_dbr
 
+    # staff caps
     if staff_loan:
         if product == "Personal Loan":
             cap = basic_salary * 8
@@ -193,7 +205,14 @@ if st.button("Calculate Eligibility"):
     else:
         cap = max_loan_dbr
 
-    approved = min(max_loan_dbr, cap, asset_limit)
+    # =============================
+    # FINAL APPROVAL LOGIC
+    # =============================
+
+    if product == "Business Loan":
+        approved = min(requested_amount, cap, max_loan_dbr)
+    else:
+        approved = min(cap, asset_limit, max_loan_dbr)
 
     emi_value = emi(approved, rate_used, months)
     total = emi_value * months
@@ -201,10 +220,18 @@ if st.button("Calculate Eligibility"):
 
     dbr_actual = emi_value / income if income else 0
 
-    st.subheader("Credit Decision")
+    # =============================
+    # OUTPUT
+    # =============================
+
+    st.subheader("Credit Decision Summary")
+
+    if product == "Business Loan":
+        st.write("Business Details:", business_details)
+        st.write("Requested Amount:", f"PKR {requested_amount:,.0f}")
 
     st.write("Approved Loan:", f"PKR {approved:,.0f}")
-    st.write("DBR:", f"{dbr_actual*100:.2f}%")
+    st.write("DBR Utilization:", f"{dbr_actual*100:.2f}%")
 
     st.metric("EMI", f"PKR {emi_value:,.0f}")
 
@@ -212,10 +239,14 @@ if st.button("Calculate Eligibility"):
     st.write("Markup:", f"PKR {markup:,.0f}")
 
     if equity_allowed:
-        st.subheader("Equity")
+        st.subheader("Equity Details")
         st.write("Equity Amount:", f"PKR {equity_amount:,.0f}")
 
-    st.subheader("Schedule")
+    # =============================
+    # SCHEDULE
+    # =============================
+
+    st.subheader("Amortization Schedule")
 
     df = schedule(approved, rate_used, months, emi_value)
 
@@ -225,8 +256,20 @@ if st.button("Calculate Eligibility"):
 
     st.dataframe(fmt, use_container_width=True)
 
-    st.download_button("Download CSV", df.to_csv(index=False), "schedule.csv")
+    st.download_button(
+        "Download CSV",
+        df.to_csv(index=False),
+        "schedule.csv",
+        "text/csv"
+    )
 
-    st.subheader("Notes")
-    st.info(f"Rate: {rate_used:.2%}")
+    # =============================
+    # NOTES
+    # =============================
+
+    st.subheader("Bank Notes")
+    st.info(f"Rate Applied: {rate_used:.2%}")
     st.info(f"DBR Limit: {dbr_limit*100:.0f}%")
+
+    if staff_loan:
+        st.success("Staff Pricing Applied (Concessional Rate)")
